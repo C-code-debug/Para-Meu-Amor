@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Ana 💖</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            background: linear-gradient(135deg, #b700ff, #f4a5ff);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 69, 224, 0.74);
+            animation: fadeIn 1.5s ease;
+        }
+
+        h1 {
+            color: #ff0936;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #ffd2d2;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background: #ff4d6d;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            background: #ff2e55;
+        }
+
+        .heart {
+            position: absolute;
+            color: #ff4d6d;
+            font-size: 20px;
+            animation: floatUp 5s linear infinite;
+        }
+
+        @keyframes floatUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100vh);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .cat {
+            position: fixed;
+            top: 50%;
+            width: 80px;
+            transform-origin: center;
+            animation: swing 1s steps(2) infinite;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        .left {
+            left: 20px;
+        }
+
+        .right {
+            right: 20px;
+        }
+
+        @keyframes swing {
+            0% {
+                transform: rotate(45deg);
+            }
+            50% {
+                transform: rotate(-45deg);
+            }
+            100% {
+                transform: rotate(45deg);
+            }
+        }
+
+        .star {
+            position: fixed;
+            top: -10px;
+            width: 4px;
+            height: 16px;
+            background: linear-gradient(white, transparent);
+            opacity: 0.8;
+            animation: fall 2.5s linear forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fall {
+            from {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            to {
+                transform: translate(-300px, 600px);
+                opacity: 0;
+            }
+        }
+
+        .music-player {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 999;
+        }
+
+        .music-player button {
+            background: #ff4d6d;
+            border: none;
+            color: white;
+            font-size: 18px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .music-player button:hover {
+            background: #ff2e55;
+        }
+
+        #nomeMusica {
+            font-size: 0.9em;
+            color: #333;
+            margin-left: 10px;
+        }
+
+    </style>
+</head>
+<body>
+    <img src="https://img.pikbest.com/png-images/20241003/cute-cat-face-vector-design_10924122.png!w700wp" class="cat left">
+    <img src="https://img.pikbest.com/png-images/20241003/cute-cat-face-vector-design_10924122.png!w700wp" class="cat right">
+    
+    <div class="card">
+        <h1>💖 Para Ana 💖</h1>
+        <p>Oi, meu amor.</p>
+        <p>Esse site é só pra te lembrar de uma coisa:</p>
+        <p><strong>Eu te amo, e isso nunca vai mudar.</strong></p>
+        <p>Mesmo longe agora, isso não me empede de te amar.</p>
+        <p>🐱💗</p>
+
+        <button onclick="mostrarMensagem()">Clica aqui 💌</button>
+
+        <p id="mensagemExtra"></p>
+    </div>
+
+    <div class="music-player">
+        <button onclick="voltarMusica()">⏮</button>
+        <button onclick="playPause()">⏯</button>
+        <button onclick="proximaMusica()">⏭</button>
+
+        <p id="nomeMusica">🎵 Música romântica</p>
+    </div>
+
+    <audio id="audio"></audio>
+
+    <script>
+        const mensagens = [
+            "Eu nunca vou te deixar, pois você já está no meu coração. 💕",
+            "Você é a melhor parte do meu dia, me faz sorrir sempre que converso com você. 😁",
+            "Meu coração é seu, e somente seu, não permito ninguém chegar perto além de você. 🥺",
+            "Mesmo longe por enquanto, eu vou sempre te guardar no meu coração vida.",
+            "Te amo mais do que tudo nesse mundo, não consigo me imaginar sem você. 💖",
+            "Você é meu lugar seguro, onde eu me expresso sem ter medo de ser julgado, e que posso sempre confiar. 🥰",
+            "Sinceramente só você me faz feliz, quando fala comigo fico sorrindo atoa. 🤗",
+            "Quando nós tiver juntos não vou desgrudar do meu benzinho viu ksks. 🤭"
+        ];
+
+        function mostrarMensagem() {
+            const msg = mensagens[Math.floor(Math.random() * mensagens.length)];
+            document.getElementById("mensagemExtra").innerText = msg;
+            criarCoracao();
+        }
+
+        function criarCoracao() {
+            const heart = document.createElement("div");
+            heart.classList.add("heart");
+            heart.innerHTML = "💖";
+            heart.style.left = Math.random() * 100 + "vw";
+            heart.style.fontSize = (15 + Math.random() * 20) + "px";
+            document.body.appendChild(heart);
+
+            setTimeout(() => {
+                heart.remove();
+            }, 5000);
+        }
+
+        // Corações automáticos
+        setInterval(criarCoracao, 400);
+
+        function criarEstrela() {
+            const star = document.createElement("div");
+            star.classList.add("star");
+
+            star.style.left = Math.random() * window.innerWidth + "px";
+            star.style.animationDuration = (1 + Math.random() * 0.2) + "s";
+
+            document.body.appendChild(star);
+
+            setTimeout(() => {
+                star.remove();
+            }, 3000);
+        }
+
+        // cria estrelas continuamente
+        setInterval(criarEstrela, 50);
+
+        const musicas = [
+            { nome: "The Fisrt Time", arquivo: "musica1.mp3" },
+            { nome: "505", arquivo: "musica2.mp3" },
+            { nome: "Her", arquivo: "musica3.mp3" },
+            { nome: "Someone To You", arquivo: "musica4.mp3" }
+        ];
+
+        let musicaAtual = 0;
+        const audio = document.getElementById("audio");
+        const nomeMusica = document.getElementById("nomeMusica");
+
+        function carregarMusica() {
+            audio.src = musicas[musicaAtual].arquivo;
+            nomeMusica.textContent = "🎵 " + musicas[musicaAtual].nome;
+        }
+
+        function playPause() {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        }
+
+        function proximaMusica() {
+            musicaAtual++;
+            if (musicaAtual >= musicas.length) {
+                musicaAtual = 0;
+            }
+            carregarMusica();
+            audio.play();
+        }
+
+        function voltarMusica() {
+            musicaAtual--;
+            if (musicaAtual < 0) {
+                musicaAtual = musicas.length - 1;
+            }
+            carregarMusica();
+            audio.play();
+        }
+
+        // Carrega a primeira música
+        carregarMusica();
+
+            </script>
+
+</body>
+</html>
