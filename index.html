@@ -4,239 +4,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Para Ana 💖</title>
-
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', sans-serif;
-}
-
-body {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #b700ff, #f4a5ff);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    padding-bottom: 110px;
-}
-
-/* CARD */
-.card {
-    background: rgba(0, 0, 0, 0.9);
-    padding: 25px;
-    border-radius: 20px;
-    width: 90%;
-    max-width: 400px;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(255, 69, 224, 0.7);
-    animation: fadeIn 1.2s ease;
-    z-index: 2;
-}
-
-h1 { color: #ff0936; }
-p { color: #ffd2d2; margin: 10px 0; }
-
-button {
-    margin-top: 12px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 20px;
-    background: #ff4d6d;
-    color: white;
-    cursor: pointer;
-}
-
-button:hover { background: #ff2e55; }
-
-/* GATOS */
-.cat {
-    position: fixed;
-    top: 50%;
-    width: 65px;
-    opacity: 0.7;
-    animation: swing 1s steps(2) infinite;
-    pointer-events: none;
-}
-
-.left { left: 5px; }
-.right { right: 5px; }
-
-@keyframes swing {
-    0% { transform: rotate(45deg); }
-    50% { transform: rotate(-45deg); }
-    100% { transform: rotate(45deg); }
-}
-
-/* CORAÇÕES */
-.heart {
-    position: fixed;
-    color: #ff4d6d;
-    font-size: 18px;
-    animation: subir 4s linear forwards;
-}
-
-@keyframes subir {
-    from { transform: translateY(0); opacity: 1; }
-    to { transform: translateY(-100vh); opacity: 0; }
-}
-
-/* ESTRELAS */
-.star {
-    position: fixed;
-    width: 3px;
-    height: 14px;
-    background: linear-gradient(white, transparent);
-    opacity: 0.7;
-    animation: cair 2.5s linear forwards;
-}
-
-@keyframes cair {
-    to {
-        transform: translate(-250px, 600px);
-        opacity: 0;
-    }
-}
-
-/* PLAYER */
-.music-player {
-    position: fixed;
-    bottom: 15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(255,255,255,0.95);
-    padding: 10px 15px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    z-index: 5;
-    max-width: 95%;
-}
-
-.music-player button {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: none;
-    background: #ff4d6d;
-    color: white;
-    font-size: 16px;
-}
-
-#nomeMusica {
-    font-size: 0.85em;
-    color: #333;
-}
-
-/* MOBILE */
-@media (max-width: 600px) {
-    .cat { width: 50px; opacity: 0.5; }
-    .card { padding: 20px; }
-    #nomeMusica { width: 100%; text-align: center; }
-}
+<link rel="stylesheet" href="style.css">
 </style>
 </head>
 
 <body>
-
-<img src="https://i.pinimg.com/236x/b8/0a/c6/b80ac6d70d43789e2118f337b5a8b251.jpg" class="cat left">
-<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTheRyKkGqknlEC8vvhH0QDximkD6VV3YTxCw&s" class="cat right">
+<div class="background"></div>
+<div class="particles"></div>
 
 <div class="card">
     <h1>💖 Para Ana 💖</h1>
     <p>Oi, meu amor.</p>
     <p>Esse site é só pra te lembrar de uma coisa:</p>
     <p><strong>Eu te amo, e isso nunca vai mudar.</strong></p>
-    <p>Mesmo longe agora, isso não me impede de te amar.</p>
 
     <button onclick="mostrarMensagem()">Clica aqui 💌</button>
     <p id="mensagemExtra"></p>
 </div>
 
 <div class="music-player">
-    <button onclick="voltarMusica()">⏮</button>
-    <button onclick="playPause()">⏯</button>
-    <button onclick="proximaMusica()">⏭</button>
-    <p id="nomeMusica">🎵 Música romântica</p>
+    <div id="nomeMusica">🎵 Música</div>
+
+    <div class="progress-container" onclick="mudarTempo(event)">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="tempo">
+        <span id="tempoAtual">0:00</span>
+        <span id="tempoTotal">0:00</span>
+    </div>
+
+    <div class="controles">
+        <button onclick="voltar()">⏮</button>
+        <button onclick="playPause()">⏯</button>
+        <button onclick="proxima()">⏭</button>
+    </div>
 </div>
+
+
 
 <audio id="audio"></audio>
 
-<script>
-const mensagens = [
-    "Eu nunca vou te deixar, pois você já está no meu coração. 💕",
-    "Você é a melhor parte do meu dia, me faz sorrir sempre que converso com você. 😁",
-    "Meu coração é seu, e somente seu, não permito ninguém chegar perto além de você. 🥺",
-    "Mesmo longe por enquanto, eu vou sempre te guardar no meu coração vida.",
-    "Te amo mais do que tudo nesse mundo, não consigo me imaginar sem você. 💖",
-    "Você é meu lugar seguro, onde eu me expresso sem ter medo de ser julgado, e que posso sempre confiar. 🥰",
-    "Sinceramente só você me faz feliz, quando fala comigo fico sorrindo atoa. 🤗",
-    "Quando nós tiver juntos não vou desgrudar do meu benzinho viu ksks. 🤭"
-];
-
-function mostrarMensagem() {
-    const msg = mensagens[Math.floor(Math.random() * mensagens.length)];
-    document.getElementById("mensagemExtra").innerText = msg;
-    criarCoracao();
-}
-
-function criarCoracao() {
-    const h = document.createElement("div");
-    h.className = "heart";
-    h.innerHTML = "💖";
-    h.style.left = Math.random() * 100 + "vw";
-    document.body.appendChild(h);
-    setTimeout(() => h.remove(), 4000);
-}
-
-/* estrelas leves */
-setInterval(() => {
-    const s = document.createElement("div");
-    s.className = "star";
-    s.style.left = Math.random() * window.innerWidth + "px";
-    document.body.appendChild(s);
-    setTimeout(() => s.remove(), 3000);
-}, 120);
-
-/* PLAYER */
-const musicas = [
-    { nome: "The First Time", arquivo: "musica1.mp3" },
-    { nome: "505", arquivo: "musica2.mp3" },
-    { nome: "Her", arquivo: "musica3.mp3" },
-    { nome: "Someone To You", arquivo: "musica4.mp3" }
-];
-
-let atual = 0;
-const audio = document.getElementById("audio");
-const nome = document.getElementById("nomeMusica");
-
-function carregar() {
-    audio.src = musicas[atual].arquivo;
-    nome.textContent = "🎵 " + musicas[atual].nome;
-}
-
-function playPause() {
-    audio.paused ? audio.play() : audio.pause();
-}
-
-function proximaMusica() {
-    atual = (atual + 1) % musicas.length;
-    carregar();
-    audio.play();
-}
-
-function voltarMusica() {
-    atual = (atual - 1 + musicas.length) % musicas.length;
-    carregar();
-    audio.play();
-}
-
-carregar();
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
