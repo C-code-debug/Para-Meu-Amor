@@ -44,7 +44,7 @@ p {
 /* BOTÃO */
 button {
     margin-top: 15px;
-    padding: 12px 25px;
+    padding: 12px 21px;
     border: none;
     border-radius: 30px;
     background: linear-gradient(135deg, #9b00ff, #ff00cc);
@@ -181,3 +181,4 @@ button:active {
         opacity: 1;
     }
 }
+
