@@ -1,0 +1,183 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #1a001f, #050008);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding-bottom: 130px;
+    color: #fff;
+}
+
+/* CARD PRINCIPAL */
+.card {
+    background: rgba(10, 0, 20, 0.85);
+    border: 1px solid rgba(180, 0, 255, 0.4);
+    box-shadow: 0 0 25px rgba(180, 0, 255, 0.6);
+    backdrop-filter: blur(10px);
+    padding: 25px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 380px;
+    text-align: center;
+    z-index: 2;
+}
+
+h1 {
+    color: #d76bff;
+    text-shadow: 0 0 8px #a300ff;
+}
+
+p {
+    color: #f1d6ff;
+    margin: 10px 0;
+    font-size: 0.95rem;
+}
+
+/* BOTÃO */
+button {
+    margin-top: 15px;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #9b00ff, #ff00cc);
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(255, 0, 200, 0.6);
+    transition: 0.2s;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+/* CORAÇÕES */
+.heart {
+    position: fixed;
+    color: #ff4df8;
+    font-size: 18px;
+    animation: subir 4s linear forwards;
+    text-shadow: 0 0 10px #ff4df8;
+}
+
+@keyframes subir {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(-100vh); opacity: 0; }
+}
+
+/* ESTRELAS */
+
+
+/* PLAYER */
+.music-player {
+    position: fixed;
+    bottom: 40px;
+    width: 90%;
+    max-width: 360px;
+    background: rgba(10, 0, 25, 0.95);
+    border: 1px solid #a200ff;
+    border-radius: 20px;
+    padding: 12px;
+    box-shadow: 0 0 20px #a200ff;
+    color: white;
+    text-align: center;
+}
+
+#nomeMusica {
+    font-size: 0.9em;
+    color: #ff7bff;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.progress-container {
+    width: 100%;
+    height: 6px;
+    background: #2a003f;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 6px 0;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff00ff, #7f00ff);
+    border-radius: 10px;
+}
+
+.tempo {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75em;
+    color: #ccc;
+}
+
+.controles {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.controles button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: #ff00ff;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+
+/* FUNDO ANIMADO */
+.background {
+    position: fixed;
+    width: 100%;
+    height: 1000px;
+    background: linear-gradient(270deg, #0a0014, #1a002b, #2a0040);
+    background-size: 600% 600%;
+    animation: bgMove 15s ease infinite;
+    z-index: -3;
+}
+
+@keyframes bgMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* PARTÍCULAS */
+.particles span {
+    position: fixed;
+    width: 4px;
+    height: 4px;
+    background: #c300ff;
+    box-shadow: 0 0 10px #ff00ff;
+    border-radius: 50%;
+    animation: floatUp 6s linear infinite;
+    opacity: 0.8;
+}
+
+@keyframes floatUp {
+    from {
+        transform: translateY(100vh);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(-10vh);
+        opacity: 1;
+    }
+}
