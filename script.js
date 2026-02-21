@@ -1,3 +1,6 @@
+// Declarado aqui pois o visualizador precisa antes
+const audio = document.getElementById("audio");
+
 /* =============================================
    FRASES
 ============================================= */
@@ -68,9 +71,6 @@ function criarCoracoes(qtd = 1) {
 /* =============================================
    CANVAS BACKGROUND + VISUALIZADOR DE ONDA
 ============================================= */
-// Declarado aqui pois o visualizador precisa antes
-const audio = document.getElementById("audio");
-
 const canvas = document.getElementById("bgCanvas");
 const ctx = canvas.getContext("2d");
 const waveCanvas = document.getElementById("waveCanvas");
@@ -100,37 +100,35 @@ function conectarAudio() {
     analyser.fftSize = 256;
     analyser.smoothingTimeConstant = 0.82;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
-
     sourceNode = audioCtx.createMediaElementSource(audio);
     sourceNode.connect(analyser);
     analyser.connect(audioCtx.destination);
     audioConectado = true;
   } catch(e) {
-    console.warn("Web Audio API não disponível:", e);
+    console.warn("Web Audio API indisponivel:", e);
   }
 }
 
-/* ---- Onda suave ---- */
-let ondaFase = 0;
-let ondaAmplitude = 8;
-let ondaAmplitudeAlvo = 8;
-
-/* ---- Estado reativo do site ---- */
-let energiaAtual = 0;       // 0-1 energia média da música
-let hueAtual = 280;         // cor atual (graus HSL)
-let brilhoAtual = 0.14;     // brilho do fundo
+/* ---- Estado reativo ---- */
+let energiaAtual = 0;
+let hueAtual = 280;
+let brilhoAtual = 0.14;
 let hueAlvo = 280;
 let brilhoAlvo = 0.14;
 
-// Paleta de cores que vai rotacionar conforme a energia
 const paletas = [
-  { baixo: 280, alto: 320 },  // roxo → rosa
-  { baixo: 200, alto: 260 },  // azul → violeta
-  { baixo: 320, alto: 360 },  // rosa → vermelho
-  { baixo: 260, alto: 300 },  // violeta → roxo
+  { baixo: 280, alto: 320 },
+  { baixo: 200, alto: 260 },
+  { baixo: 320, alto: 360 },
+  { baixo: 260, alto: 300 },
 ];
 let paletaAtual = 0;
 let tempoNaPaleta = 0;
+
+/* ---- Onda ---- */
+let ondaFase = 0;
+let ondaAmplitude = 8;
+let ondaAmplitudeAlvo = 8;
 
 function calcularEnergia() {
   if (!analyser || !dataArray) return 0;
@@ -140,55 +138,38 @@ function calcularEnergia() {
   return soma / (dataArray.length * 255);
 }
 
-/* ---- Loop principal ---- */
 let t = 0;
 (function loop() {
-  // Calcula energia se áudio conectado e tocando
   const energia = (!audio.paused && audioConectado) ? calcularEnergia() : 0;
-  energiaAtual += (energia - energiaAtual) * 0.08; // suaviza
+  energiaAtual += (energia - energiaAtual) * 0.08;
 
-  // Atualiza paleta de cor com o tempo
   tempoNaPaleta += 0.002 + energiaAtual * 0.01;
   if (tempoNaPaleta > 1) { tempoNaPaleta = 0; paletaAtual = (paletaAtual + 1) % paletas.length; }
   const p = paletas[paletaAtual];
   hueAlvo = p.baixo + (p.alto - p.baixo) * (0.5 + Math.sin(t * 0.3) * 0.5);
   hueAtual += (hueAlvo - hueAtual) * 0.02;
 
-  // Brilho reage à energia
   brilhoAlvo = 0.10 + energiaAtual * 0.55;
   brilhoAtual += (brilhoAlvo - brilhoAtual) * 0.06;
 
-  /* --- Fundo --- */
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#06000f";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const cx = canvas.width * 0.5, cy = canvas.height * 0.4;
-  const raio1 = canvas.width * (0.6 + energiaAtual * 0.2);
-
-  const g1 = ctx.createRadialGradient(
-    cx + Math.sin(t * 0.4) * 80, cy + Math.cos(t * 0.3) * 50, 0,
-    cx, cy, raio1
-  );
+  const g1 = ctx.createRadialGradient(cx + Math.sin(t * 0.4) * 80, cy + Math.cos(t * 0.3) * 50, 0, cx, cy, canvas.width * (0.6 + energiaAtual * 0.2));
   g1.addColorStop(0, `hsla(${hueAtual}, 100%, 55%, ${brilhoAtual})`);
   g1.addColorStop(0.5, `hsla(${hueAtual + 30}, 100%, 50%, ${brilhoAtual * 0.4})`);
   g1.addColorStop(1, "rgba(6,0,15,0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const g2 = ctx.createRadialGradient(
-    canvas.width * 0.8 + Math.cos(t * 0.5) * 50,
-    canvas.height * 0.7 + Math.sin(t * 0.4) * 40,
-    0,
-    canvas.width * 0.8, canvas.height * 0.7,
-    canvas.width * (0.4 + energiaAtual * 0.15)
-  );
+  const g2 = ctx.createRadialGradient(canvas.width * 0.8 + Math.cos(t * 0.5) * 50, canvas.height * 0.7 + Math.sin(t * 0.4) * 40, 0, canvas.width * 0.8, canvas.height * 0.7, canvas.width * (0.4 + energiaAtual * 0.15));
   g2.addColorStop(0, `hsla(${hueAtual + 50}, 100%, 60%, ${brilhoAtual * 0.7})`);
   g2.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Pulso extra no beat
   if (energiaAtual > 0.35) {
     const pulso = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width * 0.9);
     pulso.addColorStop(0, `hsla(${hueAtual - 20}, 100%, 70%, ${(energiaAtual - 0.35) * 0.3})`);
@@ -197,9 +178,7 @@ let t = 0;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  /* --- Onda no rodapé --- */
   desenharOnda(energia);
-
   t += 0.007;
   requestAnimationFrame(loop);
 })();
@@ -209,45 +188,33 @@ function desenharOnda(energia) {
   const h = waveCanvas.height;
   wCtx.clearRect(0, 0, w, h);
 
-  if (!audioConectado || audio.paused) {
-    // Onda suave idle quando parado
-    ondaAmplitudeAlvo = 8;
-  } else {
-    ondaAmplitudeAlvo = 12 + energia * 80;
-  }
+  ondaAmplitudeAlvo = (!audioConectado || audio.paused) ? 8 : 12 + energia * 80;
   ondaAmplitude += (ondaAmplitudeAlvo - ondaAmplitude) * 0.1;
   ondaFase += 0.025 + (audioConectado && !audio.paused ? energia * 0.12 : 0);
 
-  // Pega dados de frequência para distorcer a onda
   let freqs = null;
   if (audioConectado && dataArray) {
     analyser.getByteFrequencyData(dataArray);
     freqs = dataArray;
   }
 
-  // Desenha 2 ondas (uma preenchida, uma linha)
   for (let camada = 0; camada < 2; camada++) {
     wCtx.beginPath();
     const baseY = h * (camada === 0 ? 0.65 : 0.55);
     const faseOffset = camada * 0.8;
     const ampMult = camada === 0 ? 1 : 0.6;
 
-    wCtx.moveTo(0, h);
-
     for (let x = 0; x <= w; x += 2) {
       const progresso = x / w;
-      let distorção = 0;
-
+      let distorcao = 0;
       if (freqs) {
         const idx = Math.floor(progresso * (freqs.length * 0.6));
-        distorção = (freqs[idx] / 255) * ondaAmplitude * 0.8;
+        distorcao = (freqs[idx] / 255) * ondaAmplitude * 0.8;
       }
-
       const y = baseY
         + Math.sin(progresso * Math.PI * 4 + ondaFase + faseOffset) * ondaAmplitude * ampMult
         + Math.sin(progresso * Math.PI * 7 + ondaFase * 1.3 + faseOffset) * ondaAmplitude * 0.4 * ampMult
-        + distorção;
-
+        + distorcao;
       x === 0 ? wCtx.moveTo(x, y) : wCtx.lineTo(x, y);
     }
 
@@ -256,7 +223,6 @@ function desenharOnda(energia) {
     wCtx.closePath();
 
     if (camada === 0) {
-      // Preenchimento com gradiente
       const grad = wCtx.createLinearGradient(0, 0, w, 0);
       grad.addColorStop(0,   `hsla(${hueAtual},      100%, 65%, 0.18)`);
       grad.addColorStop(0.3, `hsla(${hueAtual + 20}, 100%, 65%, 0.28)`);
@@ -265,7 +231,6 @@ function desenharOnda(energia) {
       wCtx.fillStyle = grad;
       wCtx.fill();
     } else {
-      // Linha brilhante por cima
       const gradLinha = wCtx.createLinearGradient(0, 0, w, 0);
       gradLinha.addColorStop(0,   `hsla(${hueAtual},      100%, 80%, 0.5)`);
       gradLinha.addColorStop(0.5, `hsla(${hueAtual + 40}, 100%, 85%, 0.8)`);
@@ -277,18 +242,13 @@ function desenharOnda(energia) {
   }
 }
 
-/* ---- Ativa o canvas da onda ao tocar ---- */
 audio.addEventListener("play", () => {
   conectarAudio();
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
   waveCanvas.classList.add("ativo");
 });
-
 audio.addEventListener("pause", () => {
-  // Mantém visível mas sem energia
-  setTimeout(() => {
-    if (audio.paused) waveCanvas.classList.remove("ativo");
-  }, 800);
+  setTimeout(() => { if (audio.paused) waveCanvas.classList.remove("ativo"); }, 800);
 });
 
 /* =============================================
@@ -306,15 +266,64 @@ setInterval(() => {
 }, 260);
 
 /* =============================================
-   LOCALSTORAGE — PLAYLIST E LETRAS
+   INDEXEDDB — salva arquivos MP3 permanentemente
+============================================= */
+let db = null;
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("ParaAnaDB", 1);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains("arquivos"))
+        d.createObjectStore("arquivos", { keyPath: "id" });
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function salvarArquivoDB(id, blob) {
+  return new Promise((resolve, reject) => {
+    if (!db) return resolve();
+    const tx = db.transaction("arquivos", "readwrite");
+    tx.objectStore("arquivos").put({ id, blob });
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function buscarArquivoDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve(null);
+    const tx = db.transaction("arquivos", "readonly");
+    const req = tx.objectStore("arquivos").get(id);
+    req.onsuccess = () => resolve(req.result?.blob || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+function deletarArquivoDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("arquivos", "readwrite");
+    tx.objectStore("arquivos").delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = resolve;
+  });
+}
+
+/* =============================================
+   LOCALSTORAGE — metadados e letras
 ============================================= */
 const STORAGE_KEY = "playlist_para_ana_v2";
 
 function salvarStorage() {
-  // Salva só músicas não-blob (blobs somem ao fechar)
-  const dados = playlist
-    .filter(m => m.tipo !== "blob")
-    .map(m => ({ id: m.id, nome: m.nome, src: m.src, tipo: m.tipo, letra: m.letra || "" }));
+  const dados = playlist.map(m => ({
+    id: m.id, nome: m.nome,
+    src: m.tipo === "blob" ? null : m.src,
+    tipo: m.tipo, letra: m.letra || ""
+  }));
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dados)); } catch(e) {}
 }
 
@@ -330,61 +339,57 @@ function carregarStorage() {
 }
 
 /* =============================================
-   ESTADO DO PLAYER
+   PLAYLIST — estado
 ============================================= */
 const musicasPadrao = [
-  { id: "p1",  nome: "Someone To You",               src: "musicas/Someone To You.mp3",               tipo: "arquivo", letra: "" },
-  { id: "p2",  nome: "The First Time",                src: "musicas/The First Time.mp3",                tipo: "arquivo", letra: "" },
-  { id: "p3",  nome: "Her",                           src: "musicas/Her.mp3",                           tipo: "arquivo", letra: "" },
-  { id: "p4",  nome: "505",                           src: "musicas/505.mp3",                           tipo: "arquivo", letra: "" },
-  { id: "p5",  nome: "Arabella",                      src: "musicas/Arabella.mp3",                      tipo: "arquivo", letra: "" },
-  { id: "p6",  nome: "Menina Veneno",                 src: "musicas/Menina Veneno.mp3",                 tipo: "arquivo", letra: "" },
-  { id: "p7",  nome: "Céu Azul",                      src: "musicas/Céu Azul.mp3",                      tipo: "arquivo", letra: "" },
-  { id: "p8",  nome: "Chalé em Alaska",               src: "musicas/Chalé em Alaska.mp3",               tipo: "arquivo", letra: "" },
-  { id: "p9",  nome: "Foreigner",                     src: "musicas/Foreigner.mp3",                     tipo: "arquivo", letra: "" },
-  { id: "p10", nome: "Guns N' Roses",                 src: "musicas/Guns N' Roses.mp3",                 tipo: "arquivo", letra: "" },
-  { id: "p11", nome: "Heaven",                        src: "musicas/Heaven.mp3",                        tipo: "arquivo", letra: "" },
-  { id: "p12", nome: "Every Breath You Take",         src: "musicas/Every Breath You Take.mp3",         tipo: "arquivo", letra: "" },
-  { id: "p13", nome: "Lana",                          src: "musicas/Lana.mp3",                          tipo: "arquivo", letra: "" },
-  { id: "p14", nome: "LET ME SEE YA MOVE!",           src: "musicas/LET ME SEE YA MOVE!.mp3",           tipo: "arquivo", letra: "" },
-  { id: "p15", nome: "Ma Meilleure Ennemie",          src: "musicas/Ma Meilleure Ennemie.mp3",          tipo: "arquivo", letra: "" },
+  { id: "p1",  nome: "Someone To You",                  src: "musicas/Someone To You.mp3",                  tipo: "arquivo", letra: "" },
+  { id: "p2",  nome: "The First Time",                  src: "musicas/The First Time.mp3",                  tipo: "arquivo", letra: "" },
+  { id: "p3",  nome: "Her",                             src: "musicas/Her.mp3",                             tipo: "arquivo", letra: "" },
+  { id: "p4",  nome: "505",                             src: "musicas/505.mp3",                             tipo: "arquivo", letra: "" },
+  { id: "p5",  nome: "Arabella",                        src: "musicas/Arabella.mp3",                        tipo: "arquivo", letra: "" },
+  { id: "p6",  nome: "Menina Veneno",                   src: "musicas/Menina Veneno.mp3",                   tipo: "arquivo", letra: "" },
+  { id: "p7",  nome: "Ceu Azul",                        src: "musicas/Céu Azul.mp3",                        tipo: "arquivo", letra: "" },
+  { id: "p8",  nome: "Chale em Alaska",                 src: "musicas/Chalé em Alaska.mp3",                 tipo: "arquivo", letra: "" },
+  { id: "p9",  nome: "Foreigner",                       src: "musicas/Foreigner.mp3",                       tipo: "arquivo", letra: "" },
+  { id: "p10", nome: "Guns N Roses",                    src: "musicas/Guns N' Roses.mp3",                   tipo: "arquivo", letra: "" },
+  { id: "p11", nome: "Heaven",                          src: "musicas/Heaven.mp3",                          tipo: "arquivo", letra: "" },
+  { id: "p12", nome: "Every Breath You Take",           src: "musicas/Every Breath You Take.mp3",           tipo: "arquivo", letra: "" },
+  { id: "p13", nome: "Lana",                            src: "musicas/Lana.mp3",                            tipo: "arquivo", letra: "" },
+  { id: "p14", nome: "LET ME SEE YA MOVE!",             src: "musicas/LET ME SEE YA MOVE!.mp3",             tipo: "arquivo", letra: "" },
+  { id: "p15", nome: "Ma Meilleure Ennemie",            src: "musicas/Ma Meilleure Ennemie.mp3",            tipo: "arquivo", letra: "" },
   { id: "p16", nome: "Making Love Out of Nothing at All", src: "musicas/Making Love Out of Nothing at All.mp3", tipo: "arquivo", letra: "" },
-  { id: "p17", nome: "R U Mine",                      src: "musicas/R U Mine.mp3",                      tipo: "arquivo", letra: "" },
-  { id: "p18", nome: "Sweater Weather",               src: "musicas/Sweater Weather.mp3",               tipo: "arquivo", letra: "" },
-  { id: "p19", nome: "Sweet Child O' Mine",           src: "musicas/Sweet Child O' Mine.mp3",           tipo: "arquivo", letra: "" },
-  { id: "p20", nome: "Tempo Perdido",                 src: "musicas/Tempo Perdido.mp3",                 tipo: "arquivo", letra: "" },
-  { id: "p21", nome: "Until I Found You",             src: "musicas/Until I Found You.mp3",             tipo: "arquivo", letra: "" },
-  { id: "p22", nome: "You Give Love A Bad Name",      src: "musicas/You Give Love A Bad Name.mp3",      tipo: "arquivo", letra: "" },
+  { id: "p17", nome: "R U Mine",                        src: "musicas/R U Mine.mp3",                        tipo: "arquivo", letra: "" },
+  { id: "p18", nome: "Sweater Weather",                 src: "musicas/Sweater Weather.mp3",                 tipo: "arquivo", letra: "" },
+  { id: "p19", nome: "Sweet Child O Mine",              src: "musicas/Sweet Child O' Mine.mp3",             tipo: "arquivo", letra: "" },
+  { id: "p20", nome: "Tempo Perdido",                   src: "musicas/Tempo Perdido.mp3",                   tipo: "arquivo", letra: "" },
+  { id: "p21", nome: "Until I Found You",               src: "musicas/Until I Found You.mp3",               tipo: "arquivo", letra: "" },
+  { id: "p22", nome: "You Give Love A Bad Name",        src: "musicas/You Give Love A Bad Name.mp3",        tipo: "arquivo", letra: "" },
 ];
 
-// Mescla padrão com dados salvos (preserva letras salvas)
-function inicializarPlaylist() {
+function montarPlaylistInicial() {
   const salvo = carregarStorage();
   if (!salvo) return [...musicasPadrao];
 
-  // Pega músicas padrão e aplica letras salvas
   const mapaLetras = {};
   salvo.forEach(m => { mapaLetras[m.id] = m.letra || ""; });
-
   const padrao = musicasPadrao.map(m => ({ ...m, letra: mapaLetras[m.id] || "" }));
 
-  // Adiciona músicas extras que o usuário adicionou (não padrão)
   const idsDefault = new Set(musicasPadrao.map(m => m.id));
   const extras = salvo.filter(m => !idsDefault.has(m.id));
 
   return [...padrao, ...extras];
 }
 
-let playlist = inicializarPlaylist();
+let playlist = montarPlaylistInicial();
 let atual = Math.floor(Math.random() * playlist.length);
 let shuffleAtivo = false;
 
-const nomeMusica = document.getElementById("nomeMusica");
-const progressBar = document.getElementById("progressBar");
-const progressThumb = document.getElementById("progressThumb");
+const nomeMusica   = document.getElementById("nomeMusica");
+const progressBar  = document.getElementById("progressBar");
+const progressThumb= document.getElementById("progressThumb");
 const tempoAtualEl = document.getElementById("tempoAtual");
 const tempoTotalEl = document.getElementById("tempoTotal");
-const playIcon = document.getElementById("playIcon");
+const playIcon     = document.getElementById("playIcon");
 
 function gerarId() {
   return "m" + Date.now() + Math.floor(Math.random() * 1000);
@@ -396,7 +401,6 @@ function gerarId() {
 let letraLinhas = [];
 let letraScrollRaf = null;
 let letraScrollOffset = 0;
-let letraAlinhamento = 0; // px por segundo
 
 function iniciarLetra() {
   const musica = playlist[atual];
@@ -404,7 +408,6 @@ function iniciarLetra() {
   const letraBoxNome = document.getElementById("letraBoxNome");
   const letraScrollInner = document.getElementById("letraScrollInner");
 
-  // Para o scroll anterior
   pararLetraScroll();
 
   if (!musica.letra || musica.letra.trim() === "") {
@@ -412,11 +415,9 @@ function iniciarLetra() {
     return;
   }
 
-  // Mostra a caixa
   letraBox.style.display = "";
   letraBoxNome.textContent = musica.nome;
 
-  // Monta as linhas
   letraLinhas = musica.letra.split("\n");
   letraScrollInner.innerHTML = "";
   letraLinhas.forEach((linha, i) => {
@@ -433,10 +434,7 @@ function iniciarLetra() {
 }
 
 function pararLetraScroll() {
-  if (letraScrollRaf) {
-    cancelAnimationFrame(letraScrollRaf);
-    letraScrollRaf = null;
-  }
+  if (letraScrollRaf) { cancelAnimationFrame(letraScrollRaf); letraScrollRaf = null; }
 }
 
 function iniciarScrollLetra() {
@@ -444,15 +442,12 @@ function iniciarScrollLetra() {
   const musica = playlist[atual];
   if (!musica.letra || musica.letra.trim() === "") return;
 
-  const container = document.getElementById("letraScrollContainer");
   const inner = document.getElementById("letraScrollInner");
-  if (!inner.children.length) return;
+  if (!inner || !inner.children.length) return;
 
-  const alturaTotal = inner.scrollHeight - 120; // 120 = altura visível
+  const alturaTotal = inner.scrollHeight - 120;
   const duracao = audio.duration || 200;
-  // Velocidade: percorre a altura total ao longo da duração da música
   const pxPorSegundo = alturaTotal / duracao;
-
   let ultimoTimestamp = null;
 
   function tick(ts) {
@@ -462,56 +457,39 @@ function iniciarScrollLetra() {
 
     if (!audio.paused && !audio.ended) {
       letraScrollOffset += pxPorSegundo * delta;
-      const maxScroll = Math.max(0, alturaTotal);
-      letraScrollOffset = Math.min(letraScrollOffset, maxScroll);
+      letraScrollOffset = Math.min(letraScrollOffset, Math.max(0, alturaTotal));
       inner.style.transform = `translateY(-${letraScrollOffset}px)`;
-
-      // Destaca a linha mais próxima do centro
       atualizarLinhaSelecionada();
     }
-
     letraScrollRaf = requestAnimationFrame(tick);
   }
-
   letraScrollRaf = requestAnimationFrame(tick);
 }
 
 function atualizarLinhaSelecionada() {
   const inner = document.getElementById("letraScrollInner");
   if (!inner) return;
-
   const linhas = inner.querySelectorAll(".letra-linha");
   if (!linhas.length) return;
-
-  // Calcula qual linha está no centro da janela visível
-  const althaLinha = inner.scrollHeight / linhas.length;
-  const centroVisivel = letraScrollOffset + 60; // 60 = metade da altura do container
-  const indice = Math.min(Math.floor(centroVisivel / althaLinha), linhas.length - 1);
-
-  linhas.forEach((el, i) => {
-    el.classList.toggle("ativa", i === indice);
-  });
+  const alturaLinha = inner.scrollHeight / linhas.length;
+  const centroVisivel = letraScrollOffset + 60;
+  const indice = Math.min(Math.floor(centroVisivel / alturaLinha), linhas.length - 1);
+  linhas.forEach((el, i) => el.classList.toggle("ativa", i === indice));
 }
 
 function destacarLinha(index) {
   const inner = document.getElementById("letraScrollInner");
   if (!inner) return;
-  inner.querySelectorAll(".letra-linha").forEach((el, i) => {
-    el.classList.toggle("ativa", i === index);
-  });
+  inner.querySelectorAll(".letra-linha").forEach((el, i) => el.classList.toggle("ativa", i === index));
 }
 
-// Sincroniza o offset do scroll com o tempo atual ao separ/retomar
 function sincronizarScrollComTempo() {
   const musica = playlist[atual];
   if (!musica.letra || !audio.duration) return;
-
   const inner = document.getElementById("letraScrollInner");
   if (!inner || !inner.children.length) return;
-
   const alturaTotal = inner.scrollHeight - 120;
-  const progresso = audio.currentTime / audio.duration;
-  letraScrollOffset = alturaTotal * progresso;
+  letraScrollOffset = alturaTotal * (audio.currentTime / audio.duration);
   inner.style.transform = `translateY(-${letraScrollOffset}px)`;
   atualizarLinhaSelecionada();
 }
@@ -568,20 +546,16 @@ audio.addEventListener("play", () => {
   sincronizarScrollComTempo();
   iniciarScrollLetra();
 });
-
 audio.addEventListener("pause", () => {
   playIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"/>`;
   renderizarPlaylist();
   pararLetraScroll();
 });
-
 audio.addEventListener("ended", proxima);
-
 audio.addEventListener("seeked", () => {
   sincronizarScrollComTempo();
   if (!audio.paused) iniciarScrollLetra();
 });
-
 audio.addEventListener("timeupdate", () => {
   const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
   progressBar.style.width = pct + "%";
@@ -605,7 +579,7 @@ function mudarTempo(e) {
 function atualizarMediaSession() {
   if (!("mediaSession" in navigator)) return;
   navigator.mediaSession.metadata = new MediaMetadata({
-    title: playlist[atual]?.nome || "Música",
+    title: playlist[atual]?.nome || "Musica",
     artist: "Para Ana 💖", album: "Playlist Especial",
     artwork: [{ src: "icon.png", sizes: "512x512", type: "image/png" }]
   });
@@ -623,14 +597,13 @@ function renderizarPlaylist() {
   lista.innerHTML = "";
 
   if (!playlist.length) {
-    lista.innerHTML = `<div style="text-align:center;padding:28px;color:var(--muted);font-size:0.88rem;">Nenhuma música ainda.<br>Adicione uma! 🎵</div>`;
+    lista.innerHTML = `<div style="text-align:center;padding:28px;color:var(--muted);font-size:0.88rem;">Nenhuma musica ainda.<br>Adicione uma! 🎵</div>`;
     return;
   }
 
   playlist.forEach((m, i) => {
     const isAtual = i === atual;
     const isPlaying = isAtual && !audio.paused;
-
     const item = document.createElement("div");
     item.className = "pl-item" + (isAtual ? " active" : "");
 
@@ -643,7 +616,7 @@ function renderizarPlaylist() {
       </div>
       <span class="pl-nome" title="${m.nome}">${m.nome}</span>
       <div class="pl-actions">
-        <button class="pl-btn ${m.letra ? 'has-letra' : ''}" onclick="abrirLetraModal(event,${i})" title="${m.letra ? 'Editar letra' : 'Adicionar letra'}">
+        <button class="pl-btn ${m.letra ? "has-letra" : ""}" onclick="abrirLetraModal(event,${i})" title="${m.letra ? "Editar letra" : "Adicionar letra"}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
@@ -664,7 +637,6 @@ function renderizarPlaylist() {
     item.addEventListener("click", e => {
       if (!e.target.closest(".pl-actions")) tocarMusica(i);
     });
-
     lista.appendChild(item);
   });
 
@@ -674,6 +646,8 @@ function renderizarPlaylist() {
 
 function removerMusica(e, index) {
   e.stopPropagation();
+  const musica = playlist[index];
+  if (musica.tipo === "blob") deletarArquivoDB(musica.id);
   playlist.splice(index, 1);
   if (atual >= playlist.length) atual = Math.max(0, playlist.length - 1);
   salvarStorage();
@@ -718,23 +692,27 @@ function trocarAba(aba) {
   document.getElementById("tabLink").classList.toggle("active", aba === "link");
 }
 
-/* ---- Upload ---- */
-function processarArquivos(files) {
+/* ---- Upload — salva no IndexedDB ---- */
+async function processarArquivos(files) {
   if (!files || !files.length) return;
-  let n = 0;
-  Array.from(files).forEach(f => {
-    if (!f.type.startsWith("audio/") && !f.name.endsWith(".mp3")) return;
+  const validos = Array.from(files).filter(f => f.type.startsWith("audio/") || f.name.endsWith(".mp3"));
+  if (!validos.length) return;
+
+  mostrarToast("Salvando músicas...");
+
+  for (const f of validos) {
+    const id = gerarId();
     const nome = f.name.replace(/\.[^/.]+$/, "");
-    playlist.push({ id: gerarId(), nome, src: URL.createObjectURL(f), tipo: "blob", letra: "" });
-    n++;
-  });
-  if (n > 0) {
-    mostrarToast(`${n} música${n > 1 ? "s" : ""} adicionada${n > 1 ? "s" : ""}! 🎵`);
-    salvarStorage();
-    renderizarPlaylist();
-    fecharModal();
-    if (audio.paused) { atual = playlist.length - n; carregar(); }
+    await salvarArquivoDB(id, f);
+    const blobUrl = URL.createObjectURL(f);
+    playlist.push({ id, nome, src: blobUrl, tipo: "blob", letra: "" });
   }
+
+  salvarStorage();
+  renderizarPlaylist();
+  fecharModal();
+  mostrarToast(`${validos.length} música${validos.length > 1 ? "s" : ""} adicionada${validos.length > 1 ? "s" : ""}! 🎵`);
+  if (audio.paused) { atual = playlist.length - validos.length; carregar(); }
 }
 
 // Drag & Drop
@@ -746,9 +724,9 @@ uploadArea.addEventListener("drop", e => { e.preventDefault(); uploadArea.style.
 /* ---- Link direto ---- */
 function adicionarPorLink() {
   const nome = document.getElementById("inputNome").value.trim();
-  const src = document.getElementById("inputLink").value.trim();
+  const src  = document.getElementById("inputLink").value.trim();
   if (!src) { mostrarToast("Cole um link de MP3 válido"); return; }
-  const nomeReal = nome || src.split("/").pop().split("?")[0].replace(/\.[^/.]+$/, "") || "Nova música";
+  const nomeReal = nome || src.split("/").pop().split("?")[0].replace(/\.[^/.]+$/, "") || "Nova musica";
   playlist.push({ id: gerarId(), nome: nomeReal, src, tipo: "link", letra: "" });
   salvarStorage();
   renderizarPlaylist();
@@ -788,7 +766,6 @@ function salvarLetra() {
   salvarStorage();
   mostrarToast("Letra salva! 🎵");
   fecharLetraModal();
-  // Atualiza a caixa de letra se for a música atual
   if (letraEditandoIndex === atual) iniciarLetra();
 }
 
@@ -820,6 +797,26 @@ document.addEventListener("keydown", e => {
 });
 
 /* =============================================
-   INICIALIZAR
+   INICIALIZAR — abre IndexedDB e restaura blobs
 ============================================= */
-carregar();
+async function inicializar() {
+  await abrirDB();
+
+  // Restaura blob URLs das músicas salvas no IndexedDB
+  for (const m of playlist) {
+    if (m.tipo === "blob" && !m.src) {
+      const blob = await buscarArquivoDB(m.id);
+      if (blob) {
+        m.src = URL.createObjectURL(blob);
+      } else {
+        m._remover = true; // arquivo sumiu do DB
+      }
+    }
+  }
+
+  playlist = playlist.filter(m => !m._remover);
+  if (atual >= playlist.length) atual = 0;
+  carregar();
+}
+
+inicializar();
