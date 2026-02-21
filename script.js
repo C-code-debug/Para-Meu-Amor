@@ -80,7 +80,7 @@ function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   waveCanvas.width = window.innerWidth;
-  waveCanvas.height = 120;
+  waveCanvas.height = 160;
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
@@ -88,20 +88,31 @@ window.addEventListener("resize", resizeCanvas);
 /* ---- Web Audio API ---- */
 let audioCtx = null;
 let analyser = null;
+let analyserKick = null;
 let sourceNode = null;
 let dataArray = null;
+let dataArrayKick = null;
 let audioConectado = false;
 
 function conectarAudio() {
   if (audioConectado) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
     analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.82;
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.78;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    // Kick analyser: sem suavizacao pra capturar onset preciso
+    analyserKick = audioCtx.createAnalyser();
+    analyserKick.fftSize = 256;
+    analyserKick.smoothingTimeConstant = 0.1;
+    dataArrayKick = new Uint8Array(analyserKick.frequencyBinCount);
+
     sourceNode = audioCtx.createMediaElementSource(audio);
     sourceNode.connect(analyser);
+    sourceNode.connect(analyserKick);
     analyser.connect(audioCtx.destination);
     audioConectado = true;
   } catch(e) {
@@ -110,25 +121,37 @@ function conectarAudio() {
 }
 
 /* ---- Estado reativo ---- */
-let energiaAtual = 0;
-let hueAtual = 280;
-let brilhoAtual = 0.14;
-let hueAlvo = 280;
-let brilhoAlvo = 0.14;
+let energiaAtual  = 0;
+let energiaRaw    = 0;
+let kickAtual     = 0;
+let kickRaw       = 0;
+let kickAnterior  = 0;
+let kickPico      = 0;   // pico recente pra comparar forca relativa
+let kickDecay     = 0;   // energia de tremida com decay natural
+let hueAtual      = 280;
+let hueAlvo       = 280;
+let brilhoAtual   = 0.04;
+let brilhoAlvo    = 0.04;
+
+
+// Velocidade da onda — controlada pela energia
+let ondaVelocidade    = 0.018;
+let ondaVelocidadeAlvo= 0.018;
 
 const paletas = [
-  { baixo: 280, alto: 320 },
-  { baixo: 200, alto: 260 },
-  { baixo: 320, alto: 360 },
-  { baixo: 260, alto: 300 },
+  { baixo: 270, alto: 330 },
+  { baixo: 180, alto: 260 },
+  { baixo: 320, alto: 380 },
+  { baixo: 240, alto: 300 },
+  { baixo: 0,   alto: 50  },
 ];
-let paletaAtual = 0;
+let paletaAtual   = 0;
 let tempoNaPaleta = 0;
 
 /* ---- Onda ---- */
-let ondaFase = 0;
-let ondaAmplitude = 8;
-let ondaAmplitudeAlvo = 8;
+let ondaFase      = 0;
+let ondaAmplitude = 6;
+let ondaAmplitudeAlvo = 6;
 
 function calcularEnergia() {
   if (!analyser || !dataArray) return 0;
@@ -138,109 +161,212 @@ function calcularEnergia() {
   return soma / (dataArray.length * 255);
 }
 
+function calcularKickRaw() {
+  if (!analyserKick || !dataArrayKick) return 0;
+  analyserKick.getByteFrequencyData(dataArrayKick);
+  // Bins 1-6 = ~20-120hz (kick/bumbo)
+  let soma = 0;
+  const bins = 6;
+  for (let i = 1; i <= bins; i++) soma += dataArrayKick[i];
+  return soma / (bins * 255);
+}
+
 let t = 0;
 (function loop() {
-  const energia = (!audio.paused && audioConectado) ? calcularEnergia() : 0;
-  energiaAtual += (energia - energiaAtual) * 0.08;
+  const ativo = audioConectado && !audio.paused;
 
-  tempoNaPaleta += 0.002 + energiaAtual * 0.01;
-  if (tempoNaPaleta > 1) { tempoNaPaleta = 0; paletaAtual = (paletaAtual + 1) % paletas.length; }
+  energiaRaw = ativo ? calcularEnergia() : 0;
+  // Subida rapida, descida lenta
+  energiaAtual += energiaRaw > energiaAtual
+    ? (energiaRaw - energiaAtual) * 0.4
+    : (energiaRaw - energiaAtual) * 0.05;
+
+  kickRaw = ativo ? calcularKickRaw() : 0;
+  kickAtual += kickRaw > kickAtual
+    ? (kickRaw - kickAtual) * 0.7  // instantaneo na subida
+    : (kickRaw - kickAtual) * 0.05; // lento na descida
+
+  // Atualiza pico com decay lento
+  kickPico = Math.max(kickPico * 0.995, kickAtual);
+
+  // Deteccao de onset: kick subiu rapido E e forte em relacao ao pico recente
+  const delta = kickRaw - kickAnterior;
+  const limiarOnset = 0.055;
+  const limiarAbsoluto = 0.18;
+  if (delta > limiarOnset && kickRaw > limiarAbsoluto) {
+    // Forca proporcional ao quao forte e o kick em relacao ao pico
+    const forcaRelativa = Math.min(kickRaw / Math.max(kickPico, 0.3), 1.0);
+    const forca = forcaRelativa * kickRaw * 22;
+    kickDecay = forca;
+  }
+  kickAnterior = kickRaw;
+
+  kickDecay *= 0.72; // decay natural
+
+  // Velocidade da onda — muito exagerada pra ser perceptivel
+  ondaVelocidadeAlvo = ativo
+    ? 0.008 + energiaAtual * 0.28 + kickAtual * 0.18
+    : 0.008;
+  ondaVelocidade += (ondaVelocidadeAlvo - ondaVelocidade) * 0.04;
+
+  // Troca de paleta acelera com energia
+  tempoNaPaleta += 0.002 + energiaAtual * 0.05;
+  if (tempoNaPaleta > 1) {
+    tempoNaPaleta = 0;
+    paletaAtual = (paletaAtual + 1) % paletas.length;
+  }
   const p = paletas[paletaAtual];
-  hueAlvo = p.baixo + (p.alto - p.baixo) * (0.5 + Math.sin(t * 0.3) * 0.5);
-  hueAtual += (hueAlvo - hueAtual) * 0.02;
+  hueAlvo = p.baixo + (p.alto - p.baixo) * (0.5 + Math.sin(t * (1 + energiaAtual * 6)) * 0.5);
+  hueAtual += (hueAlvo - hueAtual) * (0.025 + energiaAtual * 0.12);
 
-  brilhoAlvo = 0.10 + energiaAtual * 0.55;
-  brilhoAtual += (brilhoAlvo - brilhoAtual) * 0.06;
+  // Brilho: bem escuro no silencio, explode no kick
+  // Base muito baixa, pico alto — contraste maximo
+  brilhoAlvo = 0.03 + kickAtual * 1.1 + energiaAtual * 0.25;
+  brilhoAtual += (brilhoAlvo > brilhoAtual)
+    ? (brilhoAlvo - brilhoAtual) * 0.5  // acende rapido
+    : (brilhoAlvo - brilhoAtual) * 0.04; // apaga devagar
 
+  /* --- Fundo --- */
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#06000f";
+  // Fundo base quase preto — so clareia com musica
+  ctx.fillStyle = "#04000a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const cx = canvas.width * 0.5, cy = canvas.height * 0.4;
-  const g1 = ctx.createRadialGradient(cx + Math.sin(t * 0.4) * 80, cy + Math.cos(t * 0.3) * 50, 0, cx, cy, canvas.width * (0.6 + energiaAtual * 0.2));
-  g1.addColorStop(0, `hsla(${hueAtual}, 100%, 55%, ${brilhoAtual})`);
-  g1.addColorStop(0.5, `hsla(${hueAtual + 30}, 100%, 50%, ${brilhoAtual * 0.4})`);
-  g1.addColorStop(1, "rgba(6,0,15,0)");
+
+  const g1 = ctx.createRadialGradient(
+    cx + Math.sin(t * 0.4) * 55, cy + Math.cos(t * 0.3) * 35, 0,
+    cx, cy, canvas.width * (0.45 + kickAtual * 0.5 + energiaAtual * 0.1)
+  );
+  g1.addColorStop(0,   `hsla(${hueAtual}, 100%, 68%, ${brilhoAtual})`);
+  g1.addColorStop(0.45,`hsla(${hueAtual + 30}, 100%, 55%, ${brilhoAtual * 0.45})`);
+  g1.addColorStop(1,   "rgba(4,0,10,0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const g2 = ctx.createRadialGradient(canvas.width * 0.8 + Math.cos(t * 0.5) * 50, canvas.height * 0.7 + Math.sin(t * 0.4) * 40, 0, canvas.width * 0.8, canvas.height * 0.7, canvas.width * (0.4 + energiaAtual * 0.15));
-  g2.addColorStop(0, `hsla(${hueAtual + 50}, 100%, 60%, ${brilhoAtual * 0.7})`);
+  const g2 = ctx.createRadialGradient(
+    canvas.width * 0.82 + Math.cos(t * 0.5) * 55,
+    canvas.height * 0.72 + Math.sin(t * 0.4) * 35,
+    0,
+    canvas.width * 0.82, canvas.height * 0.72,
+    canvas.width * (0.3 + kickAtual * 0.35)
+  );
+  g2.addColorStop(0, `hsla(${hueAtual + 55}, 100%, 68%, ${brilhoAtual * 0.9})`);
   g2.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (energiaAtual > 0.35) {
-    const pulso = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width * 0.9);
-    pulso.addColorStop(0, `hsla(${hueAtual - 20}, 100%, 70%, ${(energiaAtual - 0.35) * 0.3})`);
-    pulso.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = pulso;
+  // Flash de beat — flash quase branco no kick forte
+  if (kickDecay > 3) {
+    const intensidade = Math.min((kickDecay - 3) / 15, 1);
+    const flash = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width * 0.85);
+    flash.addColorStop(0,   `hsla(${hueAtual}, 80%, 95%, ${intensidade * 0.28})`);
+    flash.addColorStop(0.4, `hsla(${hueAtual + 20}, 100%, 75%, ${intensidade * 0.1})`);
+    flash.addColorStop(1,   "rgba(0,0,0,0)");
+    ctx.fillStyle = flash;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  desenharOnda(energia);
+  desenharVisualizador(energiaRaw, kickAtual);
   t += 0.007;
   requestAnimationFrame(loop);
 })();
 
-function desenharOnda(energia) {
+function desenharVisualizador(energia, kick) {
   const w = waveCanvas.width;
   const h = waveCanvas.height;
   wCtx.clearRect(0, 0, w, h);
 
-  ondaAmplitudeAlvo = (!audioConectado || audio.paused) ? 8 : 12 + energia * 80;
-  ondaAmplitude += (ondaAmplitudeAlvo - ondaAmplitude) * 0.1;
-  ondaFase += 0.025 + (audioConectado && !audio.paused ? energia * 0.12 : 0);
-
-  let freqs = null;
-  if (audioConectado && dataArray) {
-    analyser.getByteFrequencyData(dataArray);
-    freqs = dataArray;
+  if (!audioConectado || audio.paused) {
+    // Barras idle pequenas
+    desenharBarras(w, h, null, energia, kick);
+    return;
   }
 
-  for (let camada = 0; camada < 2; camada++) {
-    wCtx.beginPath();
-    const baseY = h * (camada === 0 ? 0.65 : 0.55);
-    const faseOffset = camada * 0.8;
-    const ampMult = camada === 0 ? 1 : 0.6;
-
-    for (let x = 0; x <= w; x += 2) {
-      const progresso = x / w;
-      let distorcao = 0;
-      if (freqs) {
-        const idx = Math.floor(progresso * (freqs.length * 0.6));
-        distorcao = (freqs[idx] / 255) * ondaAmplitude * 0.8;
-      }
-      const y = baseY
-        + Math.sin(progresso * Math.PI * 4 + ondaFase + faseOffset) * ondaAmplitude * ampMult
-        + Math.sin(progresso * Math.PI * 7 + ondaFase * 1.3 + faseOffset) * ondaAmplitude * 0.4 * ampMult
-        + distorcao;
-      x === 0 ? wCtx.moveTo(x, y) : wCtx.lineTo(x, y);
-    }
-
-    wCtx.lineTo(w, h);
-    wCtx.lineTo(0, h);
-    wCtx.closePath();
-
-    if (camada === 0) {
-      const grad = wCtx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0,   `hsla(${hueAtual},      100%, 65%, 0.18)`);
-      grad.addColorStop(0.3, `hsla(${hueAtual + 20}, 100%, 65%, 0.28)`);
-      grad.addColorStop(0.6, `hsla(${hueAtual + 40}, 100%, 70%, 0.22)`);
-      grad.addColorStop(1,   `hsla(${hueAtual + 60}, 100%, 65%, 0.15)`);
-      wCtx.fillStyle = grad;
-      wCtx.fill();
-    } else {
-      const gradLinha = wCtx.createLinearGradient(0, 0, w, 0);
-      gradLinha.addColorStop(0,   `hsla(${hueAtual},      100%, 80%, 0.5)`);
-      gradLinha.addColorStop(0.5, `hsla(${hueAtual + 40}, 100%, 85%, 0.8)`);
-      gradLinha.addColorStop(1,   `hsla(${hueAtual + 70}, 100%, 80%, 0.5)`);
-      wCtx.strokeStyle = gradLinha;
-      wCtx.lineWidth = 1.5;
-      wCtx.stroke();
-    }
-  }
+  analyser.getByteFrequencyData(dataArray);
+  desenharBarras(w, h, dataArray, energia, kick);
 }
+
+function desenharBarras(w, h, freqs, energia, kick) {
+  const totalBarras = 64;
+  const metade = totalBarras / 2;
+  const espaco = 2;
+  const larguraBarra = (w / totalBarras) - espaco;
+  const alturaMax = h * 0.60;
+  const baseY = h; // barras crescem de baixo pra cima
+
+  for (let i = 0; i < totalBarras; i++) {
+    let valor = 0;
+
+    if (freqs) {
+      // Distancia do centro (0 = borda, 1 = centro)
+      const distCentro = i < metade
+        ? (metade - 1 - i) / metade        // esquerda: i=0 eh borda, i=metade-1 eh centro
+        : (i - metade) / metade;            // direita:  i=metade eh centro, i=totalBarras-1 eh borda
+
+      const distBorda = 1 - distCentro;    // 0 = centro, 1 = borda
+
+      // Centro = graves (bins baixos), borda = agudos (bins altos)
+      const idx = Math.floor(distBorda * freqs.length * 0.50);
+      valor = freqs[Math.min(idx, freqs.length - 1)] / 255;
+    } else {
+      // Idle: ondinha suave espelhada
+      const distBorda = i < metade
+        ? (metade - 1 - i) / metade
+        : (i - metade) / metade;
+      valor = 0.04 + Math.sin(Date.now() * 0.002 + distBorda * 5) * 0.03;
+    }
+
+    // Bordas tem boost maior (agudos ficam mais visiveis)
+    const distBordaBoost = i < metade
+      ? (metade - 1 - i) / metade
+      : (i - metade) / metade;
+    const boost = 0.9 + distBordaBoost * 0.8;
+    const altura = Math.max(valor * alturaMax * boost, 3);
+
+    const x = i * (larguraBarra + espaco);
+    const y = baseY - altura;
+
+    // Cor baseada na posicao e na hue atual
+    const hueLocal = hueAtual + (i / totalBarras) * 60 - 30;
+    const brilhoLocal = 0.5 + valor * 0.5 + kick * 0.4;
+    const alpha = 0.5 + valor * 0.5;
+
+    // Gradiente vertical na barra
+    const grad = wCtx.createLinearGradient(x, y, x, baseY);
+    grad.addColorStop(0,   `hsla(${hueLocal + 20}, 100%, 80%, ${alpha})`);
+    grad.addColorStop(0.5, `hsla(${hueLocal},      100%, 60%, ${alpha * 0.8})`);
+    grad.addColorStop(1,   `hsla(${hueLocal - 10}, 100%, 40%, ${alpha * 0.3})`);
+
+    wCtx.fillStyle = grad;
+    wCtx.beginPath();
+    wCtx.roundRect(x, y, larguraBarra, altura, [2, 2, 0, 0]);
+    wCtx.fill();
+
+    // Reflexo embaixo (espelhado mais fraco)
+    const alturaReflexo = altura * 0.25;
+    const gradReflexo = wCtx.createLinearGradient(x, baseY, x, baseY + alturaReflexo);
+    gradReflexo.addColorStop(0,   `hsla(${hueLocal}, 100%, 60%, ${alpha * 0.2})`);
+    gradReflexo.addColorStop(1,   `hsla(${hueLocal}, 100%, 60%, 0)`);
+    wCtx.fillStyle = gradReflexo;
+    wCtx.beginPath();
+    wCtx.roundRect(x, baseY, larguraBarra, alturaReflexo, [0, 0, 2, 2]);
+    wCtx.fill();
+  }
+
+  // Linha de base brilhante
+  const gradLinha = wCtx.createLinearGradient(0, 0, w, 0);
+  gradLinha.addColorStop(0,   `hsla(${hueAtual},      100%, 80%, 0.1)`);
+  gradLinha.addColorStop(0.5, `hsla(${hueAtual + 30}, 100%, 90%, ${0.3 + kick * 0.6})`);
+  gradLinha.addColorStop(1,   `hsla(${hueAtual + 60}, 100%, 80%, 0.1)`);
+  wCtx.strokeStyle = gradLinha;
+  wCtx.lineWidth = 1;
+  wCtx.beginPath();
+  wCtx.moveTo(0, baseY);
+  wCtx.lineTo(w, baseY);
+  wCtx.stroke();
+}
+
 
 audio.addEventListener("play", () => {
   conectarAudio();
