@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para Ana 💖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <canvas id="bgCanvas"></canvas>
+  <div class="particles-container" id="particles"></div>
+
+  <main class="main-layout">
+
+    <!-- CARD PRINCIPAL -->
+    <div class="card">
+      <div class="card-glow"></div>
+      <h1>Para Ana</h1>
+      <p class="subtitle">porque você merece ser lembrada todos os dias</p>
+      <p class="message-text">Eu te amo, e isso nunca vai mudar.</p>
+      <button class="btn-love" onclick="mostrarMensagem()">
+        <span>💌</span>
+        <span>uma mensagem pra você</span>
+      </button>
+      <p id="mensagemExtra" class="mensagem-extra"></p>
+    </div>
+
+    <!-- CAIXA DE LETRA -->
+    <div class="letra-box" id="letraBox" style="display:none;">
+      <div class="letra-box-header">
+        <span class="letra-box-label">letra</span>
+        <span class="letra-box-nome" id="letraBoxNome"></span>
+      </div>
+      <div class="letra-scroll-container" id="letraScrollContainer">
+        <div class="letra-scroll-inner" id="letraScrollInner"></div>
+      </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div class="player-card">
+      <div class="player-header">
+        <div class="now-playing-info">
+          <div class="now-playing-label">tocando agora</div>
+          <div id="nomeMusica" class="track-name">🎵 carregando...</div>
+        </div>
+        <button class="btn-icon-sm" onclick="togglePlaylist()" title="Playlist">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="progress-container" onclick="mudarTempo(event)">
+        <div class="progress-bar" id="progressBar"></div>
+        <div class="progress-thumb" id="progressThumb"></div>
+      </div>
+      <div class="tempo">
+        <span id="tempoAtual">0:00</span>
+        <span id="tempoTotal">0:00</span>
+      </div>
+
+      <div class="controles">
+        <button class="ctrl-btn" onclick="toggleShuffle()" id="shuffleBtn" title="Aleatório">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+            <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+          </svg>
+        </button>
+        <button class="ctrl-btn ctrl-main" onclick="voltar()">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="19 20 9 12 19 4 19 20"/>
+            <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+        <button class="ctrl-btn ctrl-play" onclick="playPause()">
+          <svg id="playIcon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </button>
+        <button class="ctrl-btn ctrl-main" onclick="proxima()">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 4 15 12 5 20 5 4"/>
+            <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+        <button class="ctrl-btn" onclick="abrirModal()" title="Adicionar música">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- PLAYLIST SIDEBAR -->
+  <div class="overlay" id="overlay" onclick="togglePlaylist()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Playlist</h2>
+      <button class="btn-fechar" onclick="togglePlaylist()">✕</button>
+    </div>
+    <div class="sidebar-list" id="sidebarList"></div>
+    <div class="sidebar-footer">
+      <button class="btn-add" onclick="abrirModal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Adicionar música
+      </button>
+    </div>
+  </aside>
+
+  <!-- MODAL: ADICIONAR MÚSICA -->
+  <div class="overlay" id="modalOverlay" onclick="fecharModal()"></div>
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h3>Adicionar Música</h3>
+      <button class="btn-fechar" onclick="fecharModal()">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="tab-btn active" id="tabUpload" onclick="trocarAba('upload')">Upload MP3</button>
+      <button class="tab-btn" id="tabLink" onclick="trocarAba('link')">Link direto</button>
+    </div>
+    <div class="tab-content" id="contentUpload">
+      <label class="upload-area" id="uploadArea">
+        <input type="file" accept=".mp3,audio/*" multiple id="fileInput" onchange="processarArquivos(this.files)">
+        <div style="font-size:2.2rem;">🎵</div>
+        <p>Clique ou arraste arquivos MP3</p>
+        <small>Vários de uma vez!</small>
+      </label>
+    </div>
+    <div class="tab-content hidden" id="contentLink">
+      <div class="input-group">
+        <label>Nome da música</label>
+        <input type="text" id="inputNome" placeholder="ex: Someone To You" class="inp">
+      </div>
+      <div class="input-group">
+        <label>Link do arquivo MP3</label>
+        <input type="text" id="inputLink" placeholder="https://..." class="inp">
+        <small class="hint">Link direto de MP3 (Google Drive, Dropbox...)</small>
+      </div>
+      <button class="btn-confirmar" onclick="adicionarPorLink()">Adicionar</button>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR LETRA -->
+  <div class="overlay" id="letraOverlay" onclick="fecharLetraModal()"></div>
+  <div class="modal" id="letraModal">
+    <div class="modal-header">
+      <h3 id="letraModalNome">Letra</h3>
+      <button class="btn-fechar" onclick="fecharLetraModal()">✕</button>
+    </div>
+    <div style="padding: 0 24px 24px;">
+      <textarea class="letra-editor" id="letraTextarea" placeholder="Cole ou digite a letra aqui...&#10;&#10;Cada linha vira uma linha que rola na tela 🎵"></textarea>
+      <button class="btn-confirmar" onclick="salvarLetra()">Salvar letra</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <audio id="audio"></audio>
+  <script src="script.js"></script>
+</body>
+</html>
