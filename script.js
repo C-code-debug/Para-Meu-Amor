@@ -66,39 +66,230 @@ function criarCoracoes(qtd = 1) {
 }
 
 /* =============================================
-   CANVAS BACKGROUND
+   CANVAS BACKGROUND + VISUALIZADOR DE ONDA
 ============================================= */
+// Declarado aqui pois o visualizador precisa antes
+const audio = document.getElementById("audio");
+
 const canvas = document.getElementById("bgCanvas");
 const ctx = canvas.getContext("2d");
+const waveCanvas = document.getElementById("waveCanvas");
+const wCtx = waveCanvas.getContext("2d");
 
-function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  waveCanvas.width = window.innerWidth;
+  waveCanvas.height = 120;
+}
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-let t = 0;
-(function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const cx = canvas.width * 0.5, cy = canvas.height * 0.4;
+/* ---- Web Audio API ---- */
+let audioCtx = null;
+let analyser = null;
+let sourceNode = null;
+let dataArray = null;
+let audioConectado = false;
 
+function conectarAudio() {
+  if (audioConectado) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.82;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    sourceNode = audioCtx.createMediaElementSource(audio);
+    sourceNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    audioConectado = true;
+  } catch(e) {
+    console.warn("Web Audio API não disponível:", e);
+  }
+}
+
+/* ---- Onda suave ---- */
+let ondaFase = 0;
+let ondaAmplitude = 8;
+let ondaAmplitudeAlvo = 8;
+
+/* ---- Estado reativo do site ---- */
+let energiaAtual = 0;       // 0-1 energia média da música
+let hueAtual = 280;         // cor atual (graus HSL)
+let brilhoAtual = 0.14;     // brilho do fundo
+let hueAlvo = 280;
+let brilhoAlvo = 0.14;
+
+// Paleta de cores que vai rotacionar conforme a energia
+const paletas = [
+  { baixo: 280, alto: 320 },  // roxo → rosa
+  { baixo: 200, alto: 260 },  // azul → violeta
+  { baixo: 320, alto: 360 },  // rosa → vermelho
+  { baixo: 260, alto: 300 },  // violeta → roxo
+];
+let paletaAtual = 0;
+let tempoNaPaleta = 0;
+
+function calcularEnergia() {
+  if (!analyser || !dataArray) return 0;
+  analyser.getByteFrequencyData(dataArray);
+  let soma = 0;
+  for (let i = 0; i < dataArray.length; i++) soma += dataArray[i];
+  return soma / (dataArray.length * 255);
+}
+
+/* ---- Loop principal ---- */
+let t = 0;
+(function loop() {
+  // Calcula energia se áudio conectado e tocando
+  const energia = (!audio.paused && audioConectado) ? calcularEnergia() : 0;
+  energiaAtual += (energia - energiaAtual) * 0.08; // suaviza
+
+  // Atualiza paleta de cor com o tempo
+  tempoNaPaleta += 0.002 + energiaAtual * 0.01;
+  if (tempoNaPaleta > 1) { tempoNaPaleta = 0; paletaAtual = (paletaAtual + 1) % paletas.length; }
+  const p = paletas[paletaAtual];
+  hueAlvo = p.baixo + (p.alto - p.baixo) * (0.5 + Math.sin(t * 0.3) * 0.5);
+  hueAtual += (hueAlvo - hueAtual) * 0.02;
+
+  // Brilho reage à energia
+  brilhoAlvo = 0.10 + energiaAtual * 0.55;
+  brilhoAtual += (brilhoAlvo - brilhoAtual) * 0.06;
+
+  /* --- Fundo --- */
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#06000f";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const g = ctx.createRadialGradient(cx + Math.sin(t * 0.4) * 80, cy + Math.cos(t * 0.3) * 50, 0, cx, cy, canvas.width * 0.75);
-  g.addColorStop(0, "rgba(120,0,200,0.14)");
-  g.addColorStop(0.4, "rgba(180,0,255,0.06)");
-  g.addColorStop(1, "rgba(6,0,15,0)");
-  ctx.fillStyle = g;
+  const cx = canvas.width * 0.5, cy = canvas.height * 0.4;
+  const raio1 = canvas.width * (0.6 + energiaAtual * 0.2);
+
+  const g1 = ctx.createRadialGradient(
+    cx + Math.sin(t * 0.4) * 80, cy + Math.cos(t * 0.3) * 50, 0,
+    cx, cy, raio1
+  );
+  g1.addColorStop(0, `hsla(${hueAtual}, 100%, 55%, ${brilhoAtual})`);
+  g1.addColorStop(0.5, `hsla(${hueAtual + 30}, 100%, 50%, ${brilhoAtual * 0.4})`);
+  g1.addColorStop(1, "rgba(6,0,15,0)");
+  ctx.fillStyle = g1;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const g2 = ctx.createRadialGradient(canvas.width * 0.8 + Math.cos(t * 0.5) * 50, canvas.height * 0.7 + Math.sin(t * 0.4) * 40, 0, canvas.width * 0.8, canvas.height * 0.7, canvas.width * 0.45);
-  g2.addColorStop(0, "rgba(255,60,180,0.09)");
+  const g2 = ctx.createRadialGradient(
+    canvas.width * 0.8 + Math.cos(t * 0.5) * 50,
+    canvas.height * 0.7 + Math.sin(t * 0.4) * 40,
+    0,
+    canvas.width * 0.8, canvas.height * 0.7,
+    canvas.width * (0.4 + energiaAtual * 0.15)
+  );
+  g2.addColorStop(0, `hsla(${hueAtual + 50}, 100%, 60%, ${brilhoAtual * 0.7})`);
   g2.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Pulso extra no beat
+  if (energiaAtual > 0.35) {
+    const pulso = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width * 0.9);
+    pulso.addColorStop(0, `hsla(${hueAtual - 20}, 100%, 70%, ${(energiaAtual - 0.35) * 0.3})`);
+    pulso.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = pulso;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  /* --- Onda no rodapé --- */
+  desenharOnda(energia);
+
   t += 0.007;
-  requestAnimationFrame(draw);
+  requestAnimationFrame(loop);
 })();
+
+function desenharOnda(energia) {
+  const w = waveCanvas.width;
+  const h = waveCanvas.height;
+  wCtx.clearRect(0, 0, w, h);
+
+  if (!audioConectado || audio.paused) {
+    // Onda suave idle quando parado
+    ondaAmplitudeAlvo = 8;
+  } else {
+    ondaAmplitudeAlvo = 12 + energia * 80;
+  }
+  ondaAmplitude += (ondaAmplitudeAlvo - ondaAmplitude) * 0.1;
+  ondaFase += 0.025 + (audioConectado && !audio.paused ? energia * 0.12 : 0);
+
+  // Pega dados de frequência para distorcer a onda
+  let freqs = null;
+  if (audioConectado && dataArray) {
+    analyser.getByteFrequencyData(dataArray);
+    freqs = dataArray;
+  }
+
+  // Desenha 2 ondas (uma preenchida, uma linha)
+  for (let camada = 0; camada < 2; camada++) {
+    wCtx.beginPath();
+    const baseY = h * (camada === 0 ? 0.65 : 0.55);
+    const faseOffset = camada * 0.8;
+    const ampMult = camada === 0 ? 1 : 0.6;
+
+    wCtx.moveTo(0, h);
+
+    for (let x = 0; x <= w; x += 2) {
+      const progresso = x / w;
+      let distorção = 0;
+
+      if (freqs) {
+        const idx = Math.floor(progresso * (freqs.length * 0.6));
+        distorção = (freqs[idx] / 255) * ondaAmplitude * 0.8;
+      }
+
+      const y = baseY
+        + Math.sin(progresso * Math.PI * 4 + ondaFase + faseOffset) * ondaAmplitude * ampMult
+        + Math.sin(progresso * Math.PI * 7 + ondaFase * 1.3 + faseOffset) * ondaAmplitude * 0.4 * ampMult
+        + distorção;
+
+      x === 0 ? wCtx.moveTo(x, y) : wCtx.lineTo(x, y);
+    }
+
+    wCtx.lineTo(w, h);
+    wCtx.lineTo(0, h);
+    wCtx.closePath();
+
+    if (camada === 0) {
+      // Preenchimento com gradiente
+      const grad = wCtx.createLinearGradient(0, 0, w, 0);
+      grad.addColorStop(0,   `hsla(${hueAtual},      100%, 65%, 0.18)`);
+      grad.addColorStop(0.3, `hsla(${hueAtual + 20}, 100%, 65%, 0.28)`);
+      grad.addColorStop(0.6, `hsla(${hueAtual + 40}, 100%, 70%, 0.22)`);
+      grad.addColorStop(1,   `hsla(${hueAtual + 60}, 100%, 65%, 0.15)`);
+      wCtx.fillStyle = grad;
+      wCtx.fill();
+    } else {
+      // Linha brilhante por cima
+      const gradLinha = wCtx.createLinearGradient(0, 0, w, 0);
+      gradLinha.addColorStop(0,   `hsla(${hueAtual},      100%, 80%, 0.5)`);
+      gradLinha.addColorStop(0.5, `hsla(${hueAtual + 40}, 100%, 85%, 0.8)`);
+      gradLinha.addColorStop(1,   `hsla(${hueAtual + 70}, 100%, 80%, 0.5)`);
+      wCtx.strokeStyle = gradLinha;
+      wCtx.lineWidth = 1.5;
+      wCtx.stroke();
+    }
+  }
+}
+
+/* ---- Ativa o canvas da onda ao tocar ---- */
+audio.addEventListener("play", () => {
+  conectarAudio();
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  waveCanvas.classList.add("ativo");
+});
+
+audio.addEventListener("pause", () => {
+  // Mantém visível mas sem energia
+  setTimeout(() => {
+    if (audio.paused) waveCanvas.classList.remove("ativo");
+  }, 800);
+});
 
 /* =============================================
    PARTÍCULAS
@@ -188,7 +379,6 @@ let playlist = inicializarPlaylist();
 let atual = Math.floor(Math.random() * playlist.length);
 let shuffleAtivo = false;
 
-const audio = document.getElementById("audio");
 const nomeMusica = document.getElementById("nomeMusica");
 const progressBar = document.getElementById("progressBar");
 const progressThumb = document.getElementById("progressThumb");

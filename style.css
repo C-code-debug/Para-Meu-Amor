@@ -509,6 +509,20 @@ h1 {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* VISUALIZADOR DE ONDA */
+#waveCanvas {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+#waveCanvas.ativo { opacity: 1; }
+
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
