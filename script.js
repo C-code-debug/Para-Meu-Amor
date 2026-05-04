@@ -80,7 +80,7 @@ function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   waveCanvas.width = window.innerWidth;
-  waveCanvas.height = 160;
+  waveCanvas.height = 180;
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
@@ -226,42 +226,56 @@ let t = 0;
     ? (brilhoAlvo - brilhoAtual) * 0.5  // acende rapido
     : (brilhoAlvo - brilhoAtual) * 0.04; // apaga devagar
 
-  /* --- Fundo --- */
+  /* --- Fundo aurora cinematográfico --- */
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // Fundo base quase preto — so clareia com musica
-  ctx.fillStyle = "#04000a";
+  ctx.fillStyle = "#060310";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const cx = canvas.width * 0.5, cy = canvas.height * 0.4;
+  const cx = canvas.width * 0.5, cy = canvas.height * 0.38;
 
+  // Glow principal — pulsa com energia
   const g1 = ctx.createRadialGradient(
-    cx + Math.sin(t * 0.4) * 55, cy + Math.cos(t * 0.3) * 35, 0,
-    cx, cy, canvas.width * (0.45 + kickAtual * 0.5 + energiaAtual * 0.1)
+    cx + Math.sin(t * 0.35) * 60, cy + Math.cos(t * 0.28) * 40, 0,
+    cx, cy, canvas.width * (0.48 + kickAtual * 0.42 + energiaAtual * 0.12)
   );
-  g1.addColorStop(0,   `hsla(${hueAtual}, 100%, 68%, ${brilhoAtual})`);
-  g1.addColorStop(0.45,`hsla(${hueAtual + 30}, 100%, 55%, ${brilhoAtual * 0.45})`);
-  g1.addColorStop(1,   "rgba(4,0,10,0)");
+  g1.addColorStop(0,   `hsla(${hueAtual}, 100%, 62%, ${brilhoAtual * 1.1})`);
+  g1.addColorStop(0.4, `hsla(${hueAtual + 25}, 90%, 50%, ${brilhoAtual * 0.5})`);
+  g1.addColorStop(1,   "rgba(6,3,16,0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Segundo glow — complementar, orbita ao redor
   const g2 = ctx.createRadialGradient(
-    canvas.width * 0.82 + Math.cos(t * 0.5) * 55,
-    canvas.height * 0.72 + Math.sin(t * 0.4) * 35,
+    canvas.width * 0.78 + Math.cos(t * 0.45) * 70,
+    canvas.height * 0.65 + Math.sin(t * 0.38) * 45,
     0,
-    canvas.width * 0.82, canvas.height * 0.72,
-    canvas.width * (0.3 + kickAtual * 0.35)
+    canvas.width * 0.78, canvas.height * 0.65,
+    canvas.width * (0.28 + kickAtual * 0.3)
   );
-  g2.addColorStop(0, `hsla(${hueAtual + 55}, 100%, 68%, ${brilhoAtual * 0.9})`);
+  g2.addColorStop(0, `hsla(${hueAtual + 50}, 100%, 65%, ${brilhoAtual * 0.85})`);
   g2.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Flash de beat — flash quase branco no kick forte
+  // Terceiro glow — acento frio/azul no canto
+  const g3 = ctx.createRadialGradient(
+    canvas.width * 0.15 + Math.sin(t * 0.22) * 40,
+    canvas.height * 0.75 + Math.cos(t * 0.18) * 30,
+    0,
+    canvas.width * 0.15, canvas.height * 0.75,
+    canvas.width * (0.22 + energiaAtual * 0.15)
+  );
+  g3.addColorStop(0, `hsla(${hueAtual - 60}, 100%, 58%, ${brilhoAtual * 0.6})`);
+  g3.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g3;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Flash de beat — flash suave no kick forte
   if (kickDecay > 3) {
-    const intensidade = Math.min((kickDecay - 3) / 15, 1);
-    const flash = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width * 0.85);
-    flash.addColorStop(0,   `hsla(${hueAtual}, 80%, 95%, ${intensidade * 0.28})`);
-    flash.addColorStop(0.4, `hsla(${hueAtual + 20}, 100%, 75%, ${intensidade * 0.1})`);
+    const intensidade = Math.min((kickDecay - 3) / 18, 1);
+    const flash = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width * 0.9);
+    flash.addColorStop(0,   `hsla(${hueAtual}, 80%, 92%, ${intensidade * 0.22})`);
+    flash.addColorStop(0.35, `hsla(${hueAtual + 20}, 100%, 72%, ${intensidade * 0.09})`);
     flash.addColorStop(1,   "rgba(0,0,0,0)");
     ctx.fillStyle = flash;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -385,11 +399,13 @@ setInterval(() => {
   const p = document.createElement("div");
   p.className = "particle";
   p.style.left = Math.random() * 100 + "vw";
-  const dur = 5 + Math.random() * 6;
+  const dur = 6 + Math.random() * 7;
+  const drift = (Math.random() - 0.5) * 60;
   p.style.setProperty("--dur", dur + "s");
+  p.style.setProperty("--drift", drift + "px");
   particlesEl.appendChild(p);
   setTimeout(() => p.remove(), dur * 1000 + 500);
-}, 260);
+}, 300);
 
 /* =============================================
    INDEXEDDB — salva arquivos MP3 permanentemente
@@ -627,7 +643,7 @@ function carregar() {
   if (!playlist.length) return;
   const m = playlist[atual];
   audio.src = m.src;
-  nomeMusica.textContent = "🎵 " + m.nome;
+  nomeMusica.textContent = m.nome;
   atualizarMediaSession();
   renderizarPlaylist();
   iniciarLetra();
@@ -671,11 +687,15 @@ audio.addEventListener("play", () => {
   atualizarMediaSession();
   sincronizarScrollComTempo();
   iniciarScrollLetra();
+  const dot = document.getElementById("playingDot");
+  if (dot) dot.classList.add("visible");
 });
 audio.addEventListener("pause", () => {
   playIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"/>`;
   renderizarPlaylist();
   pararLetraScroll();
+  const dot = document.getElementById("playingDot");
+  if (dot) dot.classList.remove("visible");
 });
 audio.addEventListener("ended", proxima);
 audio.addEventListener("seeked", () => {
@@ -906,6 +926,23 @@ function mostrarToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
 }
+
+/* =============================================
+   VOLUME
+============================================= */
+function ajustarVolume(val) {
+  audio.volume = parseFloat(val);
+  const slider = document.getElementById("volumeSlider");
+  if (slider) {
+    const pct = val * 100;
+    slider.style.background = `linear-gradient(to right, var(--primary) ${pct}%, rgba(255,255,255,0.08) ${pct}%)`;
+  }
+}
+
+// Inicializa visual do slider de volume
+window.addEventListener("DOMContentLoaded", () => {
+  ajustarVolume(1);
+});
 
 /* =============================================
    TECLADO

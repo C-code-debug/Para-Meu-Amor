@@ -6,7 +6,7 @@
 <title>Para Ana 💖</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,7 +19,8 @@
     <!-- CARD PRINCIPAL -->
     <div class="card">
       <div class="card-glow"></div>
-      <h1>❤Para Ana❤</h1>
+      <div class="card-ornament"></div>
+      <h1>Para Ana</h1>
       <p class="subtitle">porque você merece ser lembrada todos os dias</p>
       <div class="card-divider"><span>✦</span></div>
       <p class="message-text">Eu te amo, e isso nunca vai mudar.</p>
@@ -46,10 +47,13 @@
       <div class="player-header">
         <div class="now-playing-info">
           <div class="now-playing-label">tocando agora</div>
-          <div id="nomeMusica" class="track-name">🎵 carregando...</div>
+          <div class="track-name-wrapper">
+            <div class="playing-dot" id="playingDot"></div>
+            <div id="nomeMusica" class="track-name">carregando...</div>
+          </div>
         </div>
         <button class="btn-icon-sm" onclick="togglePlaylist()" title="Playlist">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
             <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
             <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
@@ -68,35 +72,44 @@
 
       <div class="controles">
         <button class="ctrl-btn" onclick="toggleShuffle()" id="shuffleBtn" title="Aleatório">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
             <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
           </svg>
         </button>
-        <button class="ctrl-btn ctrl-main" onclick="voltar()">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+        <button class="ctrl-btn ctrl-main" onclick="voltar()" title="Anterior">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="19 20 9 12 19 4 19 20"/>
-            <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/>
+            <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.2"/>
           </svg>
         </button>
-        <button class="ctrl-btn ctrl-play" onclick="playPause()">
-          <svg id="playIcon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <button class="ctrl-btn ctrl-play" onclick="playPause()" title="Play/Pause">
+          <svg id="playIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
         </button>
-        <button class="ctrl-btn ctrl-main" onclick="proxima()">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+        <button class="ctrl-btn ctrl-main" onclick="proxima()" title="Próxima">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="5 4 15 12 5 20 5 4"/>
-            <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/>
+            <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.2"/>
           </svg>
         </button>
         <button class="ctrl-btn" onclick="abrirModal()" title="Adicionar música">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="16"/>
             <line x1="8" y1="12" x2="16" y2="12"/>
           </svg>
         </button>
+      </div>
+
+      <!-- Volume -->
+      <div class="volume-area">
+        <svg class="volume-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.02" value="1" oninput="ajustarVolume(this.value)">
       </div>
     </div>
 
@@ -112,7 +125,7 @@
     <div class="sidebar-list" id="sidebarList"></div>
     <div class="sidebar-footer">
       <button class="btn-add" onclick="abrirModal()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
         Adicionar música
@@ -134,7 +147,7 @@
     <div class="tab-content" id="contentUpload">
       <label class="upload-area" id="uploadArea">
         <input type="file" accept=".mp3,audio/*" multiple id="fileInput" onchange="processarArquivos(this.files)">
-        <div style="font-size:2.2rem;">🎵</div>
+        <div style="font-size:2.4rem;">🎵</div>
         <p>Clique ou arraste arquivos MP3</p>
         <small>Vários de uma vez!</small>
       </label>
@@ -160,7 +173,7 @@
       <h3 id="letraModalNome">Letra</h3>
       <button class="btn-fechar" onclick="fecharLetraModal()">✕</button>
     </div>
-    <div style="padding: 0 24px 24px;">
+    <div style="padding: 0 22px 22px;">
       <textarea class="letra-editor" id="letraTextarea" placeholder="Cole ou digite a letra aqui...&#10;&#10;Cada linha vira uma linha que rola na tela 🎵"></textarea>
       <button class="btn-confirmar" onclick="salvarLetra()">Salvar letra</button>
     </div>
